@@ -3,6 +3,7 @@ There was no copyright in the original. Therefore, none here.
 """
 import logging
 import zmq
+from zmq.log import handlers
 import simplejson as json
 
 class ZeroMQFormatter(logging.Formatter):
@@ -32,10 +33,13 @@ class ZeroMQHandler(logging.Handler):
     """
 
     @classmethod
-    def to(cklass, channel, url='localhost', port=5555, level=logging.NOTSET):
+    def to(cklass, channel, url='tcp://127.0.0.1', port=5555, level=logging.NOTSET):
         context = zmq.Context()
         publisher = context.socket (zmq.PUB)
-        return cklass(channel, publisher.bind(url+':'+str(port)), level=level)
+        uri = url+':'+str(port)
+        print uri
+        publisher.connect(uri)
+        return cklass(channel, publisher, level=level)
 
     def __init__(self, channel, zmq_client, level=logging.NOTSET):
         """
@@ -48,10 +52,10 @@ class ZeroMQHandler(logging.Handler):
 
     def emit(self, record):
         """
-        Publish record to redis logging channel
+        Publish record to zeromq logging channel
         """
         try :
-            msg = zmq.log.handlers.TOPIC_DELIM.join([self.channel,self.format(record)])
+            msg = handlers.TOPIC_DELIM.join([self.channel,self.format(record)])
             self.zmq_client.send(msg)
         except zmq.core.error.ZMQError:
             pass
@@ -67,10 +71,13 @@ class ZeroMQListHandler(logging.Handler):
     """
 
     @classmethod
-    def to(cklass, key, max_messages=None, url='localhost', port=5555, level=logging.NOTSET):
+    def to(cklass, key, max_messages=None, url='tcp://127.0.0.1', port=5555, level=logging.NOTSET):
         context = zmq.Context()
         publisher = context.socket (zmq.PUB)
-        return cklass(key, max_messages, publisher.bind(url+':'+str(port)), level=level)
+        uri = url+':'+str(port)
+        print uri
+        publisher.bind(uri)
+        return cklass(key, max_messages, publisher, level=level)
 
     def __init__(self, key, max_messages, zmq_client, level=logging.NOTSET):
         """
